@@ -37,6 +37,9 @@ pos_error_prev = pygame.Vector2(0, 0)
 PID_i = pygame.Vector2(0, 0)
 PID_i_angle = 0
 angle_error_prev = 0
+time_prev = time.time()
+PID_total = pygame.Vector2(0, 0)
+PID_angle = 0
 
 
 def PID_control(current_pos: pygame.Vector2, target_pos: pygame.Vector2, current_angle: float, target_angle: float):
@@ -45,15 +48,19 @@ def PID_control(current_pos: pygame.Vector2, target_pos: pygame.Vector2, current
     global Time
     global angle_error_prev
     global PID_i_angle
+    global time_prev
+    global PID_total
+    global PID_angle
+    if (time_diff := time.time() - time_prev) < 0.01:
+        return kinematics(current_angle, PID_total.x, PID_total.y, PID_angle)
     kp = 5
     ki = 0
     kd = 2
     pos_error = target_pos - current_pos
-    error_angle = target_angle - current_angle
     PID_p = kp * pos_error
     PID_i = PID_i + pygame.Vector2(ki*pos_error.x, ki*pos_error.y)
-    if Time.delta_time:
-        PID_d = kd*((pos_error - pos_error_prev)/Time.delta_time)
+    if time_diff := time.time() - time_prev:
+        PID_d = kd*((pos_error - pos_error_prev)/time_diff)
     else:
         PID_d = pygame.Vector2(0, 0)
     PID_total = PID_p + PID_i + PID_d
@@ -67,12 +74,14 @@ def PID_control(current_pos: pygame.Vector2, target_pos: pygame.Vector2, current
     angle_error = target_angle - current_angle
     PID_p_angle = kp * angle_error
     PID_i_angle = PID_i_angle + ki * angle_error
-    if Time.delta_time:
-        PID_d_angle = kd*((angle_error - angle_error_prev)/Time.delta_time)
+    if time_diff:
+        PID_d_angle = kd*((angle_error - angle_error_prev)/time_diff)
     else:
         PID_d_angle = 0
     PID_angle = PID_p_angle + PID_i_angle + PID_d_angle
     angle_error_prev = angle_error
+
+    time_prev = time.time()
 
     return kinematics(current_angle, PID_total.x, PID_total.y, PID_angle)
 
@@ -80,6 +89,7 @@ def PID_control(current_pos: pygame.Vector2, target_pos: pygame.Vector2, current
 base = Robot(Time, pygame.Vector2(100, 100), pygame.Color(0, 0, 255))
 base.transform = pygame.Vector2(WIDTH//2, HEIGHT//2)
 base.angle = 0
+start_time = time.time()
 while True:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
@@ -111,19 +121,27 @@ while True:
         #         base.move_motor(*(kinematics(base.angle, 0, 0, 0)))
         #     if event.key == pygame.K_e:
         #         base.move_motor(*(kinematics(base.angle, 0, 0, 0)))
+        if event.type == pygame.MOUSEBUTTONUP:
+            pos = pygame.mouse.get_pos()
+            target_pos = pygame.Vector2(*pos)
 
     Time.update()
     base.update()
 
     screen.fill('white')
     base.blit(screen)
-    target_pos = pygame.Vector2(250, 250)
+
+    # PID
+    if time.time() - start_time < 0.5:
+        target_pos = pygame.Vector2(250, 250)
+    elif time.time() - start_time < 1:
+        target_pos = pygame.Vector2(700, 500)
     target_angle = 0
-    base.move_motor(*(PID_control(base.transform,
-                                  target_pos,
-                                  radians(base.angle),
-                                  radians(target_angle))))
     surface = pygame.Surface((10, 10))
     pygame.draw.line(screen, (255, 0, 00), target_pos, base.transform)
+    base.move_motor(*(PID_control(base.transform,
+                                target_pos,
+                                radians(base.angle),
+                                radians(target_angle))))
 
     pygame.display.update()

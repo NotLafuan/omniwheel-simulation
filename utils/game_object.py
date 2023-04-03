@@ -54,10 +54,10 @@ class Robot:
                  [-sin(self.theta+(5*pi/4)), cos(self.theta+(5*pi/4)), 1/2*self.R],
                  [-sin(self.theta+(7*pi/4)), cos(self.theta+(7*pi/4)), 1/2*self.R]]
         array = np.array(array)
-        speed = np.array([[w1*100],
-                          [w2*1.0],
-                          [w3*1.02],
-                          [w4*1.05]])
+        speed = np.array([[w1*1.100],
+                          [w2*1.200],
+                          [w3*1.000],
+                          [w4*1.400]])
         result = (self.r/2) * np.matmul(array.transpose(), speed)
         self.set_velocity.x, self.set_velocity.y, self.set_angular_velocity =\
             result.transpose()[0]
